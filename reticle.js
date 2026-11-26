@@ -142,7 +142,7 @@ export function drawReticle(ctx, W, H, o) {
     } else if (e.t === "dot" && inside(e.x, e.y)) {
       const [x, y] = P(e.x, e.y);
       ctx.beginPath();
-      ctx.arc(x, y, Math.max(1.5, e.r * ppm), 0, Math.PI * 2);
+      ctx.arc(x, y, Math.max(1.0, e.r * ppm), 0, Math.PI * 2);
       ctx.fillStyle = e.color === "red" ? "#e01818" : ink;
       ctx.fill();
     } else if (e.t === "poly") {

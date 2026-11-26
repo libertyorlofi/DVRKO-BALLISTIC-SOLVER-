@@ -9,7 +9,7 @@ import { parse as parseChairgun, readText, mergeInto } from "./chairgun.js";
 const $ = (id) => document.getElementById(id);
 const RIFLE_FIELDS = ["sight_height_in", "zero_range_yd", "twist_in", "twist_direction", "zero_atmosphere", "conditions"];
 const MOA_PER_MIL = 3.43775;
-const APP_VERSION = "v13";   // keep equal to VERSION in sw.js
+const APP_VERSION = "v14";   // keep equal to VERSION in sw.js
 
 // ------------------------------------------------------------ storage
 const store = {
