@@ -6,8 +6,9 @@
 //   checksum = sum(bytes 3..15) & 0xFF
 // parsePacket() has no browser dependencies so it can be tested in Node.
 
-export const FFF0 = 0xfff0;
-export const FFF1 = 0xfff1;
+// Full 128-bit UUIDs: some browsers (Bluefy) mishandle the short 0xfff0 form.
+export const FFF0 = "0000fff0-0000-1000-8000-00805f9b34fb";
+export const FFF1 = "0000fff1-0000-1000-8000-00805f9b34fb";
 const M_TO_YD = 1 / 0.9144;
 
 const hex = (b) => [...b].map((x) => x.toString(16).padStart(2, "0").toUpperCase()).join(" ");
@@ -26,6 +27,12 @@ export function parsePacket(data) {
   let angle = new DataView(b.buffer, b.byteOffset + 12, 4).getFloat32(0, true);
   if (!(angle >= -90.0 && angle <= 90.0)) angle = null;   // also rejects NaN
   return { range_m: rangeM, range_yd: rangeM * M_TO_YD, angle_deg: angle, raw: hex(b) };
+}
+
+function describe(ex) {
+  if (!ex) return "unknown";
+  const name = ex.name && ex.name !== "Error" ? `${ex.name}: ` : "";
+  return `${name}${ex.message || ex}`;
 }
 
 export function bluetoothSupport() {
@@ -63,28 +70,40 @@ export class LrfLink {
   async connect() {
     const why = bluetoothSupport();
     if (why) { this.onStatus(why, "err"); return; }
+    this.step = "picking the device";
     try {
       this.onStatus("Choose your rangefinder in the list...", "info");
-      this.device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [FFF0] }, { namePrefix: "EE09" }],
-        optionalServices: [FFF0],
-      });
+      try {
+        this.device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [FFF0] }, { namePrefix: "EE09" }],
+          optionalServices: [FFF0],
+        });
+      } catch (ex) {
+        if (ex && ex.name === "NotFoundError") throw ex;          // user cancelled / nothing found
+        // some browsers reject filters: fall back to listing every device
+        this.onStatus("Retrying with all devices...", "info");
+        this.device = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: [FFF0] });
+      }
       this.wantConnected = true;
       this.device.addEventListener("gattserverdisconnected", this._onDisconnect);
       await this._open();
     } catch (ex) {
       this.wantConnected = false;
       if (ex && ex.name === "NotFoundError") this.onStatus("No rangefinder chosen.", "warn");
-      else this.onStatus(`Error: ${ex && ex.message ? ex.message : ex}`, "err");
+      else this.onStatus(`Error while ${this.step}: ${describe(ex)}`, "err");
     }
   }
 
   async _open() {
     this.onStatus("Connecting...", "info");
+    this.step = "connecting";
     const server = await this.device.gatt.connect();
+    this.step = "finding the rangefinder service";
     const service = await server.getPrimaryService(FFF0);
+    this.step = "finding the data channel";
     this.char = await service.getCharacteristic(FFF1);
     this.char.addEventListener("characteristicvaluechanged", this._handler);
+    this.step = "turning on notifications";
     await this.char.startNotifications();
     this.onStatus(`Connected: ${this.device.name || "rangefinder"}`, "ok");
   }
