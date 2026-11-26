@@ -33,6 +33,18 @@ export function stadiaHashes(ret) {
   return [...ys].sort((a, b) => b - a);
 }
 
+// Only hashes on whole MIL (MIL reticles) or every 4th MOA (MOA reticles) get a range label, so the labels stay
+// legible. A reticle can set its own "label_step" in its own units (the generic MOA ladder has 5 MOA hashes).
+export function labelFilter(ret, ys) {
+  const moa = String(ret.unit ?? "mil").toLowerCase() === "moa";
+  const k = moa ? 0.2908882 : 1.0;                       // MIL per reticle unit
+  const step = ret.label_step ?? (moa ? 4 : 1);
+  return ys.filter((y) => {
+    const v = Math.abs(y) / k / step;
+    return Math.abs(v - Math.round(v)) < 0.03;
+  });
+}
+
 // o = { ret, sol, target, mag, rangeForDrop(mil), flash }
 export function drawReticle(ctx, W, H, o) {
   ctx.clearRect(0, 0, W, H);
@@ -166,7 +178,7 @@ export function drawReticle(ctx, W, H, o) {
       ctx.font = `bold ${fs}px system-ui, sans-serif`;
       ctx.textAlign = side > 0 ? "left" : "right";
       // reticles with a "bdc" list (e.g. dot trees) label those rows; others label hashes on the stadia
-      const rows = ret.bdc && ret.bdc.length ? ret.bdc.map((v) => -v).sort((a, b) => b - a) : stadiaHashes(ret);
+      const rows = ret.bdc && ret.bdc.length ? ret.bdc.map((v) => -v).sort((a, b) => b - a) : labelFilter(ret, stadiaHashes(ret));
       for (const y of ret.bdc_labels === false ? [] : rows) {
         if (!inside(0.45 * side, y)) continue;
         const rng = rangeForDrop(-y);

@@ -71,6 +71,14 @@ available.
 New versions download automatically when you open the app with signal. After an update, close and reopen the app twice
 to switch to the new version. The version number is shown in **Conditions**.
 
+## Other features
+
+- **Stage tab:** keep a list of targets (range, angle, wind, clock) and see every solution at once, as cards you swipe or as
+  a list. The same list is used for every rifle.
+- **Import ChairGun:** on the Rifles tab, import a ChairGun Elite export (the emailed `.eml`, or its text saved as `.txt`).
+- **BC by speed:** loads can use Sierra-style stepped BCs, entered as `fps:BC` pairs such as `2850:0.595, 2400:0.58, 0:0.55`.
+- **Reticle range labels:** the red range numbers sit on whole-MIL lines (or every 4th MOA) so they stay readable.
+
 ## Reticles included
 
 MIL Tree (custom), Red dot circle + BDC dots, MOA Ladder + BDC (generic), Vortex EBR-7C MRAD, and ACSS Aurora MIL. The

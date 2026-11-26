@@ -27,7 +27,7 @@
 
 <main>
   <div class="panel top">
-    <label class="rangebox">Range yd
+    <label class="rangebox" data-hide-stage>Range yd
       <div class="step">
         <button data-step="-25" aria-label="Range minus 25">−</button>
         <input id="range" type="number" inputmode="decimal" min="25" max="2500" step="1">
@@ -37,12 +37,12 @@
     <details id="cond">
       <summary>Conditions <span id="condSummary" class="dim"></span></summary>
       <div class="grid">
-        <label>Angle °<input id="angle" type="number" inputmode="decimal" step="0.1"></label>
-        <label>Wind mph<input id="wind" type="number" inputmode="decimal" min="0" step="1"></label>
-        <label>Wind from (clock)
+        <label data-hide-stage>Angle °<input id="angle" type="number" inputmode="decimal" step="0.1"></label>
+        <label data-hide-stage>Wind mph<input id="wind" type="number" inputmode="decimal" min="0" step="1"></label>
+        <label data-hide-stage>Wind from (clock)
           <select id="clock"></select>
         </label>
-        <label>Mover mph
+        <label data-hide-stage>Mover mph
           <div class="step two">
             <input id="mover" type="number" inputmode="decimal" min="0" step="1">
             <span class="segs"><button id="movL" class="seg">L</button><button id="movR" class="seg on">R</button></span>
@@ -74,6 +74,15 @@
     <table id="near"></table>
   </section>
 
+  <section id="v-stage" class="view" hidden>
+    <div class="retbar">
+      <span class="segs" role="group" aria-label="Stage view">
+        <button id="stCards" class="seg">Cards</button><button id="stLines" class="seg on">Lines</button><button id="stEdit" class="seg">Edit targets</button>
+      </span>
+    </div>
+    <div id="stageBody"></div>
+  </section>
+
   <section id="v-dope" class="view" hidden>
     <div class="grid three">
       <label>From yd<input id="dFrom" type="number" inputmode="numeric" value="100"></label>
@@ -103,6 +112,8 @@
         <button id="importBtn" class="btn">Import files</button>
         <button id="exportBtn" class="btn">Export</button>
         <input id="importFile" type="file" accept=".json,application/json" multiple hidden>
+        <button id="cgBtn" class="btn">Import ChairGun</button>
+        <input id="cgFile" type="file" accept=".eml,.txt,.html,.htm,message/rfc822,text/*" hidden>
       </div>
       <p class="dim small">Rifles are stored only on this device. Import the JSON files from your PC's <code>rifles</code> folder, or use Export to back them up.</p>
       <div class="grid" id="rifleForm"></div>
@@ -118,6 +129,7 @@
 
 <nav>
   <button data-view="single" class="on">Single</button>
+  <button data-view="stage">Stage</button>
   <button data-view="dope">DOPE</button>
   <button data-view="reticle">Reticle</button>
   <button data-view="rifles">Rifles</button>

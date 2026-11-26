@@ -1,14 +1,15 @@
-// Ballistic Solver web app: SINGLE / DOPE / RETICLE / RIFLES.
+// Ballistic Solver web app: SINGLE / STAGE / DOPE / RETICLE / RIFLES.
 // Everything runs on the device. Rifles and settings live in this browser's localStorage only.
 
 import { solve, densityAltitude } from "./solver/core.js";
 import { drawReticle, toMil } from "./reticle.js";
 import { LrfLink, bluetoothSupport } from "./lrf.js";
+import { parse as parseChairgun, readText, mergeInto } from "./chairgun.js";
 
 const $ = (id) => document.getElementById(id);
 const RIFLE_FIELDS = ["sight_height_in", "zero_range_yd", "twist_in", "twist_direction", "zero_atmosphere", "conditions"];
 const MOA_PER_MIL = 3.43775;
-const APP_VERSION = "v11";   // keep equal to VERSION in sw.js
+const APP_VERSION = "v12";   // keep equal to VERSION in sw.js
 
 // ------------------------------------------------------------ storage
 const store = {
@@ -21,9 +22,16 @@ const store = {
 const DEFAULTS = {
   rifle: "", load: 0, unit: "mil", range: 500, angle: 0, wind: 0, clock: 3, temp: 59, press: 29.92, hum: 50,
   mover: 0, moverDir: "R", from: 100, to: 1200, step: 50, reticle: "", target: "", mag: "1x", view: "single",
-  useAngle: false,
+  useAngle: false, stageView: "lines", card: 0,
 };
 let S = { ...DEFAULTS, ...store.get("bs.state", {}) };
+// Stage: one shared target list for all rifles (same format as the desktop stages/stage.json)
+let stage = store.get("bs.stage", null) ?? [
+  { name: "T1", range: 250, angle: 0, wind: 5, clock: 3 },
+  { name: "T2", range: 420, angle: 0, wind: 5, clock: 3 },
+  { name: "T3", range: 610, angle: 0, wind: 8, clock: 2 },
+];
+const saveStage = () => store.set("bs.stage", stage);
 let rifles = store.get("bs.rifles", null);
 let reticles = {};   // name -> reticle (converted to MIL)
 let targets = {};    // name -> target
@@ -135,8 +143,10 @@ function wireInputs() {
 function setView(v) {
   S.view = v;
   document.querySelectorAll("nav button").forEach((b) => b.classList.toggle("on", b.dataset.view === v));
-  for (const id of ["single", "dope", "reticle", "rifles"]) $("v-" + id).hidden = id !== v;
+  for (const id of ["single", "stage", "dope", "reticle", "rifles"]) $("v-" + id).hidden = id !== v;
   $("cond").closest(".panel").hidden = v === "rifles";
+  document.body.classList.toggle("stage", v === "stage");      // hides range/wind/angle: each target has its own
+  stageEditDirty = true;
   changed();
 }
 
@@ -163,6 +173,7 @@ function render() {
   }
   try {
     if (S.view === "single") renderSingle(prof);
+    else if (S.view === "stage") renderStage(prof);
     else if (S.view === "dope") renderDope(prof);
     else if (S.view === "reticle") renderReticle(prof);
   } catch (e) {
@@ -368,7 +379,147 @@ function wireLrf() {
 }
 
 // ------------------------------------------------------------ rifle editor
+// ------------------------------------------------------------ stage (multiple targets)
+let stageEditDirty = true;
+let stageCount = 0;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function stageClock(c) {
+  const m = ((c % 12) + 12) % 12;
+  const hr = Math.floor(m) || 12;
+  return m % 1 ? `${hr}:30` : `${hr}:00`;
+}
+
+function solveTargets(prof) {
+  const unit = unitKey();
+  const out = [];
+  for (const t of stage) {
+    const rng = num(t.range, 0);
+    if (!(rng >= 25 && rng <= 2500)) continue;
+    const clock = num(t.clock, 3); const mph = num(t.wind, 0); const ang = num(t.angle, 0);
+    let r;
+    try { r = solve(prof, [Math.round(rng)], mph, (clock % 12) * 30, ang, atmo())[0]; } catch { continue; }
+    if (!r) continue;
+    out.push({ name: t.name || "-", range: Math.round(rng), angle: ang, mph, clock, elev: r["elev_" + unit],
+      wind: r["wind_" + unit], transonic: r.transonic });
+  }
+  return out.sort((a, b) => a.range - b.range);
+}
+
+function renderStage(prof) {
+  $("stCards").classList.toggle("on", S.stageView === "cards");
+  $("stLines").classList.toggle("on", S.stageView === "lines");
+  $("stEdit").classList.toggle("on", S.stageView === "edit");
+  const body = $("stageBody");
+  if (S.stageView === "edit") {
+    if (stageEditDirty) { buildStageEdit(body); stageEditDirty = false; }   // don't rebuild while typing
+    return;
+  }
+  stageEditDirty = true;
+  const rows = solveTargets(prof);
+  stageCount = rows.length;
+  if (!rows.length) { body.className = ""; body.innerHTML = '<p class="info dim">No valid targets. Use Edit targets.</p>'; return; }
+  if (S.stageView === "cards") renderStageCards(body, rows); else renderStageLines(body, rows);
+}
+
+function renderStageLines(body, rows) {
+  body.className = "";
+  const html = ["<table><thead><tr><th>Target</th><th>Yd</th><th>Elev</th><th>Wind</th></tr></thead><tbody>"];
+  for (const d of rows) {
+    const cond = `${d.mph} mph @ ${stageClock(d.clock)} · ${d.angle >= 0 ? "+" : ""}${d.angle}°`;
+    html.push(`<tr><td class="nm">${esc(d.name)}<small>${cond}${d.transonic ? ' <span class="warn">TRANSONIC</span>' : ""}</small></td>` +
+      `<td class="yd">${d.range}</td><td class="el">${fmtElev(d.elev)}</td><td class="wd ${windClass(d.wind)}">${fmtWind(d.wind)}</td></tr>`);
+  }
+  html.push("</tbody></table>");
+  body.innerHTML = html.join("");
+}
+
+function renderStageCards(body, rows) {
+  S.card = Math.max(0, Math.min(S.card, rows.length - 1));
+  const d = rows[S.card];
+  body.className = "stagecards";
+  const dots = rows.map((_, i) => (i === S.card ? "●" : "○")).join(" ");
+  body.innerHTML =
+    `<div class="stagenav"><button class="btn" id="stPrev" aria-label="Previous target">◀</button>` +
+    `<div class="title">${esc(d.name)} · ${d.range} yd · ${d.angle >= 0 ? "+" : ""}${d.angle}°</div>` +
+    `<button class="btn" id="stNext" aria-label="Next target">▶</button></div>` +
+    `<div class="dots">${dots} &nbsp; ${S.card + 1} / ${rows.length}</div>` +
+    `<div class="big"><div class="cell"><div class="cap">ELEVATION</div><div class="num green">${fmtElev(d.elev)}</div></div>` +
+    `<div class="cell"><div class="cap">WIND</div><div class="num ${windClass(d.wind)}">${fmtWind(d.wind)}</div></div></div>` +
+    `<div class="info dim">${d.mph} mph @ ${stageClock(d.clock)}${d.transonic ? ' <span class="warn">TRANSONIC</span>' : ""}` +
+    `<br>Swipe or use the arrows to change target</div>`;
+  $("stPrev").onclick = () => stepCard(-1);
+  $("stNext").onclick = () => stepCard(1);
+}
+
+function stepCard(d) {
+  if (stageCount) { S.card = (S.card + d + stageCount) % stageCount; changed(); }
+}
+
+function buildStageEdit(body) {
+  body.className = "";
+  body.replaceChildren();
+  stage.forEach((t, i) => {
+    const card = document.createElement("div");
+    card.className = "stagecard";
+    card.innerHTML =
+      `<div class="head"><input type="text" data-k="name" value="${esc(t.name)}" aria-label="Target name">` +
+      `<button class="btn x" aria-label="Delete target">✕</button></div><div class="grid">` +
+      [["range", "Range yd"], ["angle", "Angle °"], ["wind", "Wind mph"], ["clock", "From o'clock"]]
+        .map(([k, l]) => `<label>${l}<input type="number" inputmode="decimal" step="any" data-k="${k}" value="${esc(t[k] ?? "")}"></label>`)
+        .join("") + "</div>";
+    card.querySelectorAll("input").forEach((inp) => inp.addEventListener("input", () => {
+      const k = inp.dataset.k;
+      stage[i][k] = k === "name" ? inp.value : num(inp.value, 0);
+      saveStage();
+    }));
+    card.querySelector(".x").onclick = () => { stage.splice(i, 1); saveStage(); stageEditDirty = true; changed(); };
+    body.appendChild(card);
+  });
+  const add = document.createElement("button");
+  add.className = "btn";
+  add.textContent = "+ Add target";
+  add.onclick = () => {
+    const last = stage[stage.length - 1];
+    stage.push({ name: `T${stage.length + 1}`, range: last ? Math.round(num(last.range, 200)) + 100 : 200,
+      angle: last ? num(last.angle, 0) : 0, wind: last ? num(last.wind, 5) : 5, clock: last ? num(last.clock, 3) : 3 });
+    saveStage(); stageEditDirty = true; changed();
+  };
+  const note = document.createElement("p");
+  note.className = "dim small";
+  note.textContent = "Auto-saved. The Cards and Lines views sort targets by range. The same list is used for every rifle.";
+  body.append(add, note);
+}
+
+function wireStage() {
+  for (const [id, v] of [["stCards", "cards"], ["stLines", "lines"], ["stEdit", "edit"]]) {
+    $(id).onclick = () => { S.stageView = v; stageEditDirty = true; changed(); };
+  }
+  let x0 = null;
+  const body = $("stageBody");
+  body.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; }, { passive: true });
+  body.addEventListener("touchend", (e) => {
+    if (x0 === null || S.stageView !== "cards") return;
+    const dx = e.changedTouches[0].clientX - x0;
+    x0 = null;
+    if (Math.abs(dx) > 60) stepCard(dx > 0 ? -1 : 1);
+  }, { passive: true });
+}
+
+// ------------------------------------------------------------ rifle editor
 const getPath = (o, p) => p.split(".").reduce((a, k) => (a == null ? undefined : a[k]), o);
+
+// "2850:0.595, 2400:0.58, 0:0.55"  <->  [[2850, 0.595], [2400, 0.58], [0, 0.55]]  (fastest first)
+const bandsToText = (b) => (b && b.length ? b.map(([v, bc]) => `${+v}:${+bc}`).join(", ") : "");
+function textToBands(t) {
+  if (!t.trim()) return null;
+  const out = [];
+  for (const part of t.split(",")) {
+    const m = /^\s*([\d.]+)\s*:\s*([\d.]+)\s*$/.exec(part);
+    if (!m || !(parseFloat(m[2]) > 0)) return false;
+    out.push([parseFloat(m[1]), parseFloat(m[2])]);
+  }
+  return out.sort((a, b) => b[0] - a[0]);
+}
 function setPath(o, p, v) {
   const ks = p.split(".");
   const last = ks.pop();
@@ -393,6 +544,7 @@ const LOAD_SPEC = [
   ["name", "Load name", "text", "wide"],
   ["drag_model", "Drag model", ["G1", "G7"]],
   ["bc", "BC", "num"],
+  ["bc_bands", "BC by speed (optional): fps:BC, e.g. 2850:0.595, 2400:0.58, 0:0.55", "bands", "wide"],
   ["muzzle_velocity_fps", "Muzzle velocity fps", "num"],
   ["bullet_weight_gr", "Bullet weight gr", "num"],
   ["bullet_diameter_in", "Diameter in", "num"],
@@ -411,6 +563,17 @@ function buildForm(container, spec, obj, onName) {
       el = document.createElement("select");
       fillSelect(el, type.map((x) => [x, x]), getPath(obj, path) ?? type[0]);
       el.addEventListener("change", () => { setPath(obj, path, el.value); saveRifles(); changed(); });
+    } else if (type === "bands") {
+      el = document.createElement("input");
+      el.type = "text"; el.placeholder = "2850:0.595, 2400:0.58, 0:0.55";
+      el.value = bandsToText(obj.bc_bands);
+      el.addEventListener("input", () => {
+        const b = textToBands(el.value);
+        if (b === false) { el.classList.add("bad"); return; }          // keep the last good value until it parses
+        el.classList.remove("bad");
+        if (b) obj.bc_bands = b; else delete obj.bc_bands;
+        saveRifles(); changed();
+      });
     } else if (type === "check") {
       lab.classList.add("check");
       el = document.createElement("input"); el.type = "checkbox"; el.checked = getPath(obj, path) !== false;
@@ -443,7 +606,7 @@ function renderRifleEditor() {
     if (l.bc_bands?.length) {
       const p = document.createElement("p");
       p.className = "dim small wide"; p.style.gridColumn = "1 / -1";
-      p.textContent = "This load uses velocity-band BCs from an imported file; the single BC above is ignored while bands are present.";
+      p.textContent = "Speed-band BCs are in use, so the single BC above is ignored. Clear the BC by speed box to go back to it.";
       $("loadForm").appendChild(p);
     }
   }
@@ -504,6 +667,26 @@ function wireEditor() {
     renderRigSelects(); renderRifleEditor(); changed();
     alert(added ? `Imported ${added} rifle(s).` : "No valid rifle files found. Use the JSON files from the rifles folder.");
   };
+  $("cgBtn").onclick = () => $("cgFile").click();
+  $("cgFile").onchange = async (ev) => {
+    const f = ev.target.files[0];
+    ev.target.value = "";
+    if (!f) return;
+    try {
+      const text = readText(f.name, new Uint8Array(await f.arrayBuffer()));
+      if (!/Rifle:|Cartridge:/i.test(text)) { alert("That doesn't look like a ChairGun Elite export. Save the emailed message as .eml or paste its text into a .txt file."); return; }
+      const { rifle, load, info } = parseChairgun(text);
+      const kept = mergeInto(rifles, rifle, load);
+      saveRifles();
+      S.rifle = kept.name; S.load = kept.loads.findIndex((l) => l.name === load.name);
+      applyRifleConditions();
+      renderRigSelects(); renderRifleEditor(); changed();
+      alert(`Imported "${load.name}" into "${kept.name}" (${load.drag_model} BC ${load.bc}, ${load.muzzle_velocity_fps} fps).\n` +
+        `Check the twist, zero distance and zero weather on this page. ChairGun shows ${info.dope.length} DOPE rows to compare against.`);
+    } catch (e) {
+      alert(`Could not read that file: ${e.message}`);
+    }
+  };
   $("exportBtn").onclick = () => {
     const blob = new Blob([JSON.stringify(rifles, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
@@ -535,7 +718,7 @@ async function loadData() {
 }
 
 async function init() {
-  wireInputs(); wireEditor(); wireLrf();
+  wireInputs(); wireEditor(); wireLrf(); wireStage();
   await loadData();
   if (!currentRifle() && rifles.length) S.rifle = rifles[0].name;
   if (!store.get("bs.state", null)) applyRifleConditions();

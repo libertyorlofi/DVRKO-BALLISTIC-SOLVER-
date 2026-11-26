@@ -2,6 +2,7 @@
  "name": "MOA Ladder + BDC (generic)",
  "unit": "moa",
  "focal_plane": "FFP",
+ "label_step": 5,
  "notes": "Original generic design. Hashes: 1 MOA ticks, 5 MOA long hash, numbers every 10 MOA. Wind dots every 2 MOA on the 10-40 MOA rows. Red range numbers are computed from the current load and weather.",
  "elements": [
   {

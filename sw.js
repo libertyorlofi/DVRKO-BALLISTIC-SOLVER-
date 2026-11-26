@@ -1,9 +1,9 @@
 // Offline cache. Bump VERSION whenever any web file changes so phones pick up the update.
-const VERSION = "v11";
+const VERSION = "v12";
 const CACHE = "ballistic-" + VERSION;
 const FILES = [
   "./", "index.html", "style.css", "app.js", "reticle.js", "manifest.webmanifest",
-  "lrf.js", "solver/core.js", "solver/drag_tables.js", "data/index.json", "data/starter_rifle.json",
+  "lrf.js", "chairgun.js", "solver/core.js", "solver/drag_tables.js", "data/index.json", "data/starter_rifle.json",
   "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png",
 ];
 
