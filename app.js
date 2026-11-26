@@ -8,6 +8,7 @@ import { LrfLink, bluetoothSupport } from "./lrf.js";
 const $ = (id) => document.getElementById(id);
 const RIFLE_FIELDS = ["sight_height_in", "zero_range_yd", "twist_in", "twist_direction", "zero_atmosphere", "conditions"];
 const MOA_PER_MIL = 3.43775;
+const APP_VERSION = "v10";   // keep equal to VERSION in sw.js
 
 // ------------------------------------------------------------ storage
 const store = {
@@ -341,6 +342,7 @@ function onLrfReading(r) {
 }
 
 function wireLrf() {
+  $("ver").textContent = `App ${APP_VERSION}`;
   lrf = new LrfLink({ onStatus: setLrfStatus, onReading: onLrfReading });
   const why = bluetoothSupport();
   if (why) setLrfStatus(why, "warn");
