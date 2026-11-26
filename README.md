@@ -81,6 +81,7 @@ to switch to the new version. The version number is shown in **Conditions**.
 
 ## Reticles included
 
-MIL Tree (custom), Red dot circle + BDC dots, MOA Ladder + BDC (generic), Vortex EBR-7C MRAD, and ACSS Aurora MIL. The
-EBR-7C and Aurora were measured from the makers' published diagrams, with a few small details estimated. They are not
-official products of Vortex or Primary Arms.
+MIL Tree (custom), Red dot circle + BDC dots, MOA Ladder + BDC (generic), Vortex EBR-7C MRAD, ACSS Aurora MIL, and Arken
+EP5 5-25 MRAD. The EBR-7C, Aurora and Arken were measured from the makers' published pictures and charts, with a few small
+details estimated. They are not
+official products of Vortex, Primary Arms or Arken.

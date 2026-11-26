@@ -128,7 +128,7 @@ export function drawReticle(ctx, W, H, o) {
       ctx.beginPath();
       ctx.moveTo(...P(e.x1, e.y1));
       ctx.lineTo(...P(e.x2, e.y2));
-      ctx.strokeStyle = ink;
+      ctx.strokeStyle = e.color === "red" ? "#e01818" : ink;   // per-element red (illuminated centre)
       ctx.lineWidth = wd;
       ctx.stroke();
     } else if (e.t === "arc") {
@@ -143,7 +143,7 @@ export function drawReticle(ctx, W, H, o) {
       const [x, y] = P(e.x, e.y);
       ctx.beginPath();
       ctx.arc(x, y, Math.max(1.5, e.r * ppm), 0, Math.PI * 2);
-      ctx.fillStyle = ink;
+      ctx.fillStyle = e.color === "red" ? "#e01818" : ink;
       ctx.fill();
     } else if (e.t === "poly") {
       ctx.beginPath();

@@ -1,5 +1,5 @@
 // Offline cache. Bump VERSION whenever any web file changes so phones pick up the update.
-const VERSION = "v12";
+const VERSION = "v13";
 const CACHE = "ballistic-" + VERSION;
 const FILES = [
   "./", "index.html", "style.css", "app.js", "reticle.js", "manifest.webmanifest",
