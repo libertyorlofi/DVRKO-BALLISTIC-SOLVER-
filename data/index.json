@@ -1,0 +1,16 @@
+{
+ "reticles": [
+  "acss_aurora_mil.json",
+  "ebr7c_mrad.json",
+  "mil_tree_custom.json",
+  "moa_ladder_bdc.json",
+  "reddot_circle_bdc.json"
+ ],
+ "targets": [
+  "coyote.json",
+  "ipsc_66.json",
+  "ipsc_full.json",
+  "whitetail_buck.json",
+  "wild_boar.json"
+ ]
+}

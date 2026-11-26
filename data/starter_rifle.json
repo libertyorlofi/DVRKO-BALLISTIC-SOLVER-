@@ -1,0 +1,47 @@
+{
+  "name": "6.5 Creedmoor",
+  "sight_height_in": 2.25,
+  "zero_range_yd": 100,
+  "twist_in": 8,
+  "twist_direction": "right",
+  "zero_atmosphere": {
+    "temp_f": 78,
+    "pressure_inhg": 29.5,
+    "humidity_pct": 50
+  },
+  "conditions": {
+    "temp_f": 78,
+    "pressure_inhg": 29.5,
+    "humidity_pct": 50
+  },
+  "loads": [
+    {
+      "name": "Sierra 142gr SMK",
+      "drag_model": "G1",
+      "bc": 0.58,
+      "bc_bands": [
+        [
+          2850,
+          0.595
+        ],
+        [
+          2400,
+          0.58
+        ],
+        [
+          2050,
+          0.575
+        ],
+        [
+          0,
+          0.55
+        ]
+      ],
+      "muzzle_velocity_fps": 2722,
+      "bullet_weight_gr": 142,
+      "bullet_diameter_in": 0.264,
+      "bullet_length_in": 1.375,
+      "notes": "Sierra stepped G1 BCs. Twist and 100 yd zero are ASSUMED - change to match your rifle. Humidity 50% assumed."
+    }
+  ]
+}

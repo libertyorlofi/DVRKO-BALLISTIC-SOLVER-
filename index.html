@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ballistic Solver</title>
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Ballistic">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="rig">
+    <select id="rifleSel" aria-label="Rifle"></select>
+    <select id="loadSel" aria-label="Load"></select>
+  </div>
+  <div class="units" role="group" aria-label="Units">
+    <button id="unitMil" class="seg on">MIL</button><button id="unitMoa" class="seg">MOA</button>
+  </div>
+</header>
+
+<main>
+  <div class="panel top">
+    <label class="rangebox">Range yd
+      <div class="step">
+        <button data-step="-25" aria-label="Range minus 25">−</button>
+        <input id="range" type="number" inputmode="decimal" min="25" max="2500" step="1">
+        <button data-step="25" aria-label="Range plus 25">+</button>
+      </div>
+    </label>
+    <details id="cond">
+      <summary>Conditions <span id="condSummary" class="dim"></span></summary>
+      <div class="grid">
+        <label>Angle °<input id="angle" type="number" inputmode="decimal" step="0.1"></label>
+        <label>Wind mph<input id="wind" type="number" inputmode="decimal" min="0" step="1"></label>
+        <label>Wind from (clock)
+          <select id="clock"></select>
+        </label>
+        <label>Mover mph
+          <div class="step two">
+            <input id="mover" type="number" inputmode="decimal" min="0" step="1">
+            <span class="segs"><button id="movL" class="seg">L</button><button id="movR" class="seg on">R</button></span>
+          </div>
+        </label>
+        <label>Temp °F<input id="temp" type="number" inputmode="decimal" step="1"></label>
+        <label>Station press inHg<input id="press" type="number" inputmode="decimal" step="0.01"></label>
+        <label>Humidity %<input id="hum" type="number" inputmode="decimal" min="0" max="100" step="1"></label>
+      </div>
+      <div class="lrf">
+        <button id="lrfBtn" class="btn">Connect rangefinder</button>
+        <span id="lrfStatus" class="dim">Not connected</span>
+      </div>
+      <div class="lrf">
+        <label class="check"><input id="useAngle" type="checkbox"> Use rangefinder angle (unconfirmed)</label>
+        <button id="lrfLog" class="btn">Download readings</button>
+      </div>
+    </details>
+  </div>
+
+  <section id="v-single" class="view">
+    <div class="big">
+      <div class="cell"><div class="cap">ELEVATION</div><div id="elev" class="num green">--</div></div>
+      <div class="cell"><div class="cap">WIND</div><div id="windHold" class="num">--</div></div>
+    </div>
+    <div id="lead" class="lead"></div>
+    <div id="info" class="info dim"></div>
+    <table id="near"></table>
+  </section>
+
+  <section id="v-dope" class="view" hidden>
+    <div class="grid three">
+      <label>From yd<input id="dFrom" type="number" inputmode="numeric" value="100"></label>
+      <label>To yd<input id="dTo" type="number" inputmode="numeric" value="1200"></label>
+      <label>Step<input id="dStep" type="number" inputmode="numeric" value="50"></label>
+    </div>
+    <div id="dopeCond" class="info dim"></div>
+    <div class="tablewrap"><table id="dopeTable"></table></div>
+  </section>
+
+  <section id="v-reticle" class="view" hidden>
+    <div class="retbar">
+      <select id="retSel" aria-label="Reticle"></select>
+      <select id="tgtSel" aria-label="Target"></select>
+      <span id="magBar" class="segs" hidden><button id="mag1" class="seg on">1x</button><button id="mag3" class="seg">3x</button></span>
+    </div>
+    <div id="retSol" class="retsol"></div>
+    <div class="canvaswrap"><canvas id="ret"></canvas></div>
+    <div id="retInfo" class="info dim"></div>
+  </section>
+
+  <section id="v-rifles" class="view" hidden>
+    <div class="panel">
+      <div class="row">
+        <button id="newRifle" class="btn">New rifle</button>
+        <button id="delRifle" class="btn danger">Delete rifle</button>
+        <button id="importBtn" class="btn">Import files</button>
+        <button id="exportBtn" class="btn">Export</button>
+        <input id="importFile" type="file" accept=".json,application/json" multiple hidden>
+      </div>
+      <p class="dim small">Rifles are stored only on this device. Import the JSON files from your PC's <code>rifles</code> folder, or use Export to back them up.</p>
+      <div class="grid" id="rifleForm"></div>
+      <h3>Loads</h3>
+      <div class="row">
+        <button id="newLoad" class="btn">Add load</button>
+        <button id="delLoad" class="btn danger">Delete this load</button>
+      </div>
+      <div class="grid" id="loadForm"></div>
+    </div>
+  </section>
+</main>
+
+<nav>
+  <button data-view="single" class="on">Single</button>
+  <button data-view="dope">DOPE</button>
+  <button data-view="reticle">Reticle</button>
+  <button data-view="rifles">Rifles</button>
+</nav>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
