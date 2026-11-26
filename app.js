@@ -8,7 +8,7 @@ import { LrfLink, bluetoothSupport } from "./lrf.js";
 const $ = (id) => document.getElementById(id);
 const RIFLE_FIELDS = ["sight_height_in", "zero_range_yd", "twist_in", "twist_direction", "zero_atmosphere", "conditions"];
 const MOA_PER_MIL = 3.43775;
-const APP_VERSION = "v10";   // keep equal to VERSION in sw.js
+const APP_VERSION = "v11";   // keep equal to VERSION in sw.js
 
 // ------------------------------------------------------------ storage
 const store = {
@@ -341,8 +341,13 @@ function onLrfReading(r) {
   changed();
 }
 
+let offlineNote = "";
+function showVersion() {
+  $("ver").textContent = `App ${APP_VERSION}` + (offlineNote ? ` · ${offlineNote}` : "");
+}
+
 function wireLrf() {
-  $("ver").textContent = `App ${APP_VERSION}`;
+  showVersion();
   lrf = new LrfLink({ onStatus: setLrfStatus, onReading: onLrfReading });
   const why = bluetoothSupport();
   if (why) setLrfStatus(why, "warn");
@@ -538,7 +543,13 @@ async function init() {
   setView(S.view);
   window.addEventListener("resize", changed);
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
+    navigator.serviceWorker.register("sw.js")
+      .then(() => navigator.serviceWorker.ready)
+      .then(async () => { offlineNote = (await caches.keys()).length ? "offline ready" : ""; showVersion(); })
+      .catch(() => { offlineNote = "offline NOT available in this browser"; showVersion(); });
+  } else {
+    offlineNote = "offline NOT available in this browser";
+    showVersion();
   }
 }
 init();
